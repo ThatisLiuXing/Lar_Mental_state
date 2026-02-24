@@ -1,1 +1,90 @@
+name: 更新置顶消息
 
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: '请输入要置顶显示的内容'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update-message:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        
+      - name: 设置时区为北京时间
+        run: |
+          sudo timedatectl set-timezone Asia/Shanghai
+          
+      - name: 获取当前北京时间
+        id: get-time
+        run: |
+          echo "datetime=$(date '+%Y-%m-%d-%H-%M-%S')" >> $GITHUB_OUTPUT
+          echo "formatted_time=$(date '+%Y年%m月%d日 %H:%M:%S')" >> $GITHUB_OUTPUT
+          
+      - name: 创建归档文件
+        run: |
+          # 创建归档目录（如果不存在）
+          mkdir -p archives
+          
+          # 创建归档markdown文件
+          cat > "archives/${{ steps.get-time.outputs.datetime }}.md" << 'EOF'
+          # 置顶消息归档
+
+          **时间**: ${{ steps.get-time.outputs.formatted_time }} (北京时间)
+
+          **内容**:
+
+          ${{ github.event.inputs.message }}
+          EOF
+          
+      - name: 更新README.md
+        run: |
+          # 读取用户输入的消息
+          MESSAGE="${{ github.event.inputs.message }}"
+          TIME="${{ steps.get-time.outputs.formatted_time }}"
+          
+          # 创建新的置顶内容
+          NEW_PINNED="<!-- PINNED-MESSAGE-START -->\n## 📌 置顶消息\n\n> $MESSAGE\n\n*更新时间: $TIME (北京时间)*\n<!-- PINNED-MESSAGE-END -->"
+          
+          # 检查README是否存在
+          if [ -f README.md ]; then
+            # 读取现有README内容
+            README_CONTENT=$(cat README.md)
+            
+            # 检查是否已存在置顶标记
+            if grep -q "<!-- PINNED-MESSAGE-START -->" README.md; then
+              # 替换现有的置顶内容
+              sed -i '/<!-- PINNED-MESSAGE-START -->/,/<!-- PINNED-MESSAGE-END -->/c\<!-- PINNED-MESSAGE-START -->\n## 📌 置顶消息\n\n> '"$MESSAGE"'\n\n*更新时间: '"$TIME"' (北京时间)*\n<!-- PINNED-MESSAGE-END -->' README.md
+            else
+              # 在文件开头添加置顶内容
+              echo -e "$NEW_PINNED\n\n$(cat README.md)" > README.md
+            fi
+          else
+            # 创建新的README文件
+            echo -e "$NEW_PINNED\n\n<!-- 在这里添加仓库介绍，这部分内容不会被Actions修改 -->" > README.md
+          fi
+          
+      - name: 提交更改
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 添加所有更改
+          git add README.md
+          git add archives/
+          
+          # 检查是否有更改需要提交
+          if git diff --cached --quiet; then
+            echo "没有需要提交的更改"
+          else
+            git commit -m "更新置顶消息 - ${{ steps.get-time.outputs.formatted_time }}"
+            git push
+          fi
