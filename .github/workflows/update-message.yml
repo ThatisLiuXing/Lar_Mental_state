@@ -52,7 +52,7 @@ jobs:
           TIME="${{ steps.get-time.outputs.formatted_time }}"
           
           # 创建新的置顶内容
-          NEW_PINNED="<!-- PINNED-MESSAGE-START -->\n## 📌 置顶消息\n\n> $MESSAGE\n\n*更新时间: $TIME (北京时间)*\n<!-- PINNED-MESSAGE-END -->"
+          NEW_PINNED="<!-- PINNED-MESSAGE-START -->\n\n## $MESSAGE\n\n*更新时间: $TIME (北京时间)*\n<!-- PINNED-MESSAGE-END -->"
           
           # 检查README是否存在
           if [ -f README.md ]; then
@@ -62,7 +62,7 @@ jobs:
             # 检查是否已存在置顶标记
             if grep -q "<!-- PINNED-MESSAGE-START -->" README.md; then
               # 替换现有的置顶内容
-              sed -i '/<!-- PINNED-MESSAGE-START -->/,/<!-- PINNED-MESSAGE-END -->/c\<!-- PINNED-MESSAGE-START -->\n## 📌 置顶消息\n\n> '"$MESSAGE"'\n\n*更新时间: '"$TIME"' (北京时间)*\n<!-- PINNED-MESSAGE-END -->' README.md
+              sed -i '/<!-- PINNED-MESSAGE-START -->/,/<!-- PINNED-MESSAGE-END -->/c\<!-- PINNED-MESSAGE-START -->\n\n##  '"$MESSAGE"'\n\n*更新时间: '"$TIME"' (北京时间)*\n<!-- PINNED-MESSAGE-END -->' README.md
             else
               # 在文件开头添加置顶内容
               echo -e "$NEW_PINNED\n\n$(cat README.md)" > README.md
